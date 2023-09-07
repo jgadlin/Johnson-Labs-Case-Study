@@ -1,0 +1,230 @@
+---
+title: "Heart Disease Prediction"
+author: "Jamila Gadlin"
+date: "08/17/2023"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+## Project Background
+
+Heart diseases are a major global concern and one of the leading causes of death. Early detection can play a pivotal role in treatment and management, potentially saving lives. This analysis aims to leverage data containing various medical and personal attributes to predict the likelihood of heart disease. Through this model, we hope to shed light on significant predictors and contribute to early intervention strategies.
+
+---
+
+## Import Libraries
+
+Before we delve into the analysis, we need to ensure we have all the necessary tools at our disposal. This means importing the required libraries.
+
+```{r libraries, message=FALSE, warning=FALSE}
+
+install_if_missing <- function(pkg) {
+  if (!require(pkg, character.only = TRUE)) {
+    install.packages(pkg, dependencies = TRUE)
+    library(pkg, character.only = TRUE)
+  }
+}
+
+# Using the function to install and load the required libraries
+install_if_missing("tidyverse")
+install_if_missing("caret")
+install_if_missing("ggplot2")
+
+library(tidyverse)  # for data manipulation and visualization
+library(caret)
+library(ggplot2)
+
+# for machine learning
+```
+```{r data, message=FALSE, warning=FALSE}
+heart_data <- read.csv("heart_1.csv")
+head(heart_data)
+```
+
+## Check for Missing Data and Feature Engineering
+
+```{r missing_values, message=FALSE, warning=FALSE}
+
+missing_values <- sum(is.na(heart_data))
+missing_values
+
+```
+
+The variable missing_values has a value of 0. This indicates that there are no missing or null values in the dataset, ensuring data completeness and allowing for analysis without the need for imputation or data cleaning related to missing entries.
+
+
+## Exploratory Data Analysis`
+
+```{r Analysis, message=FALSE, warning=FALSE}
+
+# 1. Distribution of the target variable
+target_plot <- ggplot(heart_data, aes(x = factor(target))) +
+  geom_bar(fill = "steelblue") +
+  labs(title = "Distribution of Heart Disease Cases", 
+       x = "Heart Disease (0 = No, 1 = Yes)", 
+       y = "Count")
+target_plot
+
+# 2. Age distribution of the individuals
+age_plot <- ggplot(heart_data, aes(x = age)) +
+  geom_histogram(binwidth=5, fill="lightblue", color="black", alpha=0.7) +
+  labs(title = "Age Distribution of Individuals", 
+       x = "Age", 
+       y = "Count")
+age_plot
+
+# 3. Distribution of chest pain type
+cp_plot <- ggplot(heart_data, aes(x = factor(cp))) +
+  geom_bar(fill = "coral") +
+  labs(title = "Distribution of Chest Pain Type", 
+       x = "Chest Pain Type", 
+       y = "Count")
+cp_plot
+
+# 4. Heart Disease presence based on sex
+sex_plot <- ggplot(heart_data, aes(x = factor(sex), fill = factor(target))) +
+  geom_bar(position="dodge") +
+  labs(title = "Heart Disease Presence by Sex", 
+       x = "Sex (0 = Female, 1 = Male)", 
+       y = "Count")
+sex_plot
+
+```
+
+## Train-Test Split
+
+```{r splitIndex, message=FALSE, warning=FALSE}
+
+set.seed(123)
+splitIndex <- createDataPartition(heart_data$target, p = 0.7, list = FALSE)
+train_data <- heart_data[splitIndex, ]
+test_data  <- heart_data[-splitIndex, ]
+paste0(dim(train_data))
+paste0(dim(test_data))
+
+```
+
+## Model Implementation
+
+```{r Model, message=FALSE, warning=FALSE}
+model <- glm(target ~ ., data = train_data, family = "binomial")
+summary(model)
+```
+
+Call:
+This shows the function call used to generate the model. You used the glm function with a binomial family, indicating logistic regression, and you're predicting the target variable using all other variables in the train_data dataset.
+
+Deviance Residuals:
+These give us a sense of how well the model's predictions match the actual outcomes.
+
+Min and Max show the range of the residuals. Large residuals indicate observations that are not well-predicted by the model.
+Median close to 0 indicates that, on average, the model is predicting probabilities close to the actual outcomes.
+Coefficients:
+This is the meat of the output. For logistic regression, these coefficients represent the log odds.
+
+Estimate: This column represents the change in the log odds of the outcome for a one-unit change in the predictor variable, holding all other predictors constant.
+
+For instance, the coefficient for sex is -1.365245. This means that being male (since male is coded as 1) is associated with a decrease in the log odds of having heart disease compared to being female, holding all other factors constant.
+
+Std. Error: This shows the standard error of the coefficients, which measures the variability in the estimate for the coefficient.
+
+z value: This is the coefficient divided by its standard error.
+
+Pr(>|z|): This is the p-value associated with the z-statistic. It tests the null hypothesis that the coefficient of the predictor is equal to zero (no effect). A low p-value (< 0.05) indicates that you can reject the null hypothesis.
+
+From the output, variables like sex, cp, trestbps, thalach, exang, oldpeak, ca, and thal have significant p-values, suggesting they are significant predictors of heart disease.
+
+Signif. codes:
+This provides a key for the significance stars. The more stars, the more significant the predictor.
+
+Dispersion parameter:
+For binomial data, this is fixed to 1. It's more relevant for other types of GLMs.
+
+Null deviance and Residual deviance:
+Null deviance indicates how well the response variable is predicted by a model with no predictors, just an intercept.
+Residual deviance indicates how well the response variable is predicted by the model with predictors.
+A large reduction from the null deviance to the residual deviance indicates that the predictors in the model are improving its fit.
+
+AIC (Akaike Information Criterion):
+This is a measure of the goodness of fit of the model. It takes into account both the statistical fit of the model and the number of parameters used. Lower values of AIC indicate better-fitting models.
+
+Number of Fisher Scoring iterations:
+This is a technical detail about how the logistic regression model was fit. Typically, you won't need to use this for interpretation or diagnostics.
+
+Interpretation:
+From the model summary, several predictors significantly impact the likelihood of heart disease. For instance:
+
+Being male (sex) reduces the log-odds of having heart disease compared to females.
+Different types of chest pains (cp) increase the log-odds of having heart disease.
+As thalach (maximum heart rate achieved) increases, so does the log-odds of having heart disease.
+Presence of exercise-induced angina (exang) decreases the log-odds of having heart disease.
+The actual relationships can be more precisely interpreted using the coefficients, especially when transformed from log-odds to odds ratios.
+
+Remember, the results and interpretations are based on the dataset and might not directly translate to broader populations or different contexts.
+
+
+## Model Evaluation
+
+```{r Evaluation, message=FALSE, warning=FALSE}
+
+predictions <- predict(model, newdata = test_data, type = "response")
+predicted_classes <- ifelse(predictions > 0.5, 1, 0)
+confusion <- confusionMatrix(as.factor(predicted_classes), as.factor(test_data$target))
+confusion
+```
+Confusion Matrix:
+The confusion matrix is a tabular representation of Actual vs Predicted values. Here's what each cell represents:
+
+True Negative (TN): 33 - Patients correctly predicted to not have heart disease.
+False Positive (FP): 4 - Patients incorrectly predicted to have heart disease.
+False Negative (FN): 10 - Patients incorrectly predicted to not have heart disease.
+True Positive (TP): 43 - Patients correctly predicted to have heart disease.
+Statistics:
+Accuracy: 0.8444 - This is the proportion of true results (both true positives and true negatives) among the total number of cases examined. It indicates that the model is correct 84.44% of the time.
+
+95% CI: (0.7528, 0.9123) - This is the range in which we are 95% confident the true accuracy of the model lies.
+
+No Information Rate: 0.5222 - This is the accuracy we would achieve by always predicting the majority class. It's a baseline against which the model is compared.
+
+P-Value [Acc > NIR]: 1.307e-10 - This is the statistical significance of the observed accuracy being better than the no information rate. A very small p-value (like this one) indicates that the model is significantly better than just guessing the majority class.
+
+Kappa: 0.6864 - This statistic measures inter-rater reliability for categorical items. A value closer to 1 implies better agreement between the predictions and the actual values.
+
+Mcnemar's Test P-Value: 0.1814 - This tests the hypothesis that the row and column marginal frequencies are equal (i.e., the model has similar error rates for false positives and false negatives). A high p-value (greater than 0.05) suggests that there is no significant difference between the model's type I and type II error rates.
+
+Sensitivity (or True Positive Rate): 0.7674 - Of all the actual positives, how many were correctly predicted? It indicates that 76.74% of patients with heart disease were correctly identified by the model.
+
+Specificity (or True Negative Rate): 0.9149 - Of all the actual negatives, how many were correctly predicted? It indicates that 91.49% of patients without heart disease were correctly identified by the model.
+
+Pos Pred Value (or Precision): 0.8919 - Of all the predicted positives, how many were actual positives? It indicates that 89.19% of the predicted positive cases truly have heart disease.
+
+Neg Pred Value: 0.8113 - Of all the predicted negatives, how many were actual negatives? It indicates that 81.13% of the predicted negative cases truly do not have heart disease.
+
+Prevalence: 0.4778 - This is the proportion of actual positives in the dataset. It indicates that 47.78% of the dataset have heart disease.
+
+Detection Rate: 0.3667 - This is the proportion of true positives in the dataset. It's essentially the product of prevalence and sensitivity.
+
+Detection Prevalence: 0.4111 - This is the proportion of predicted positives. It tells us about the model's tendency to predict positive outcomes.
+
+Balanced Accuracy: 0.8412 - This is the average of sensitivity and specificity, giving a balanced view of the model's performance across both classes.
+
+The Positive Class indicates that the class "0" (No heart disease) is considered the positive class for the purpose of these statistics.
+
+Overall Interpretation:
+The model has an accuracy of 84.44%, which means it correctly predicts whether a patient has heart disease or not in 84.44% of cases. The model has good sensitivity and specificity, indicating it's fairly reliable in predicting both positive and negative cases. The kappa value further suggests a good agreement between the model's predictions and the actual outcomes.
+
+
+## Conculsion
+
+The logistic regression model developed for predicting the presence of heart disease demonstrates a strong performance with an accuracy of 84.44%. This indicates that in more than 8 out of 10 cases, the model correctly identifies the presence or absence of heart disease.
+
+The model's specificity, at 91.49%, suggests it's particularly effective at correctly identifying individuals without heart disease, making it reliable in ruling out false alarms. Its sensitivity, at 76.74%, signifies that it correctly identifies a significant majority of those with heart disease, though there's some room for improvement to reduce potential false negatives.
+
+Several predictors, as revealed by the model summary, play a statistically significant role in determining the outcome, emphasizing the multifaceted nature of heart disease risk.
+
+In the context of medical applications, where the cost of false negatives can be high (missing a patient with heart disease), the model's sensitivity will be a critical metric to keep an eye on. Future work can focus on improving this sensitivity, perhaps through feature engineering, using more advanced models, or acquiring more comprehensive data.
+
+Overall, the model serves as a promising tool in the early detection of heart disease, but like all models, especially in healthcare, it should be used in conjunction with clinical expertise and judgment.
+
